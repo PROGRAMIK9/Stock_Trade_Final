@@ -8,5 +8,6 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/ASUS/OneDrive/Desktop/StockTradingApp/sqlite-jdbc.jar"/>
 	<classpathentry kind="lib" path="C:/Java/lib/postgresql-42.7.8.jar"/>
+	<classpathentry kind="lib" path="C:/Java/lib/json-20240303.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

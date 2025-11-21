@@ -58,7 +58,7 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     			+ "portfolio_id INTEGER NOT NULL,"
     			+ "symbl VARCHAR(20) NOT NULL,"
     			+ "qty INTEGER NOT NULL,"
-    			+ "avg_ rice FLOAT NOT NULL,"
+    			+ "avg_price FLOAT NOT NULL,"
     			+ "FOREIGN KEY (portfolio_id) REFERENCES portfolio(id))");
     	
     	stat.execute("CREATE TABLE IF NOT EXISTS transactions("
@@ -77,7 +77,7 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     public int createUser(User user) throws SQLException{
     	String psql = "INSERT INTO users(username, email, password) VALUES (?,?,?)";
     	PreparedStatement stmt = con.prepareStatement(psql, Statement.RETURN_GENERATED_KEYS);
-    	stmt.setString(1, user.getUserName());
+    	stmt.setString(1, user.getUsername());
     	stmt.setString(2, user.getEmail());
     	stmt.setString(3, user.getPassword());
     	stmt.executeUpdate();
@@ -108,7 +108,7 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     }
     
     public int createPortfolio(int userId, double amount) throws SQLException {
-    	String psql = "INSERT INTO portfolios (user_id, cash_acc) VALUES (?,?)";
+    	String psql = "INSERT INTO portfolio (user_id, cash_acc) VALUES (?,?)";
     	PreparedStatement stmt = con.prepareStatement(psql, Statement.RETURN_GENERATED_KEYS);
     	stmt.setInt(1, userId);
     	stmt.setDouble(2,amount);
@@ -120,7 +120,7 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     	return portfolioId;
     }
     
-    public Portfolio getPortfolio(int userId) throws SQLException{
+    public Portfolio getPortfolioByUserId(int userId) throws SQLException{
     	String psql = "SELECT * FROM portfolio WHERE user_id = ?";
     	PreparedStatement stmt = con.prepareStatement(psql);
     	stmt.setInt(1, userId);
@@ -128,8 +128,8 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     	Portfolio pf = null;
     	if(rs.next()) {
     		pf = new Portfolio(rs.getInt("id"), rs.getDouble("cash_acc"));
-    		loadHolding(pf);
-    		loadTransaction(pf);
+    		loadHoldings(pf);
+    		loadTransactions(pf);
     	}
     	
     	stmt.close();
@@ -154,8 +154,8 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     	while(rs.next()) {
     		portfolio.addHolding(
     				rs.getString("symbol"),
-    				rs.getString("qty"),
-    				rs.getString("avg_price")
+    				rs.getInt("qty"),
+    				rs.getDouble("avg_price")
     		);
     	}
     	stmt.close();
@@ -220,7 +220,7 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     	stmt.setString(3, transaction.getSymbol());
     	stmt.setInt(4, transaction.getQuantity());
     	stmt.setDouble(5,  transaction.getPrice());
-    	stmt.setString(6, transaction.getTimeStamp().toString());
+    	stmt.setString(6, transaction.getTimestamp().toString());
     	stmt.executeUpdate();
     	stmt.close();
     }
