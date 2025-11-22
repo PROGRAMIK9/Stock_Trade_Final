@@ -1,6 +1,5 @@
 package com.gui;
 
-//import com.api.StockAPIClient;
 import com.database.DatabaseManager;
 import com.models.*;
 import com.api.ApiClient;
@@ -41,7 +40,24 @@ public class DashboardFrame extends JFrame {
         this.portfolioService = new PortfolioManagementService(dbManager);
         this.availableStocks = new HashMap<>();
         this.apiClient =  new ApiClient();
-        
+        try {
+            // 1. Force load the portfolio from the DB
+            Portfolio p = dbManager.getPortfolioByUserId(currentUser.getId());
+            
+            // 2. If it doesn't exist, create it!
+            if (p == null) {
+                System.out.println("No portfolio found. Creating one...");
+                int portId = dbManager.createPortfolio(currentUser.getId(), 100000.00); // Give $100k
+                p = dbManager.getPortfolioByUserId(currentUser.getId()); // Load it again
+            }
+
+            // 3. CRITICAL: Attach it to the User object in memory
+            this.currentUser.setPortfolio(p);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Database Error: " + e.getMessage());
+        }
         initializeUI();
         loadStockData();
         updatePortfolioDisplay();
@@ -205,10 +221,34 @@ public class DashboardFrame extends JFrame {
             protected Map<String, Stock> doInBackground() {
             	List<String> symbols = Arrays.asList(
             		    "NSE:RELIANCE-EQ", "NSE:TCS-EQ", "NSE:INFY-EQ", 
-            		    "NSE:HDFCBANK-EQ", "NSE:ICICIBANK-EQ", "NSE:SBIN-EQ", 
-            		    "NSE:TATAMOTORS-EQ", "NSE:ITC-EQ", "NSE:WIPRO-EQ"
+            		    "NSE:HDFCBANK-EQ", "NSE:ICICIBANK-EQ", "NSE:SBIN-EQ",
+            		    "NSE:ITC-EQ", "NSE:WIPRO-EQ"
             		);
-            		return apiClient.fetchMultipleStocks(symbols);
+            		Map<String,Stock> stocks =  apiClient.fetchMultipleStocks(symbols);
+            		for (Stock s : stocks.values()) {
+                        try {
+                            // Call the method we added to ApiClient earlier
+                            List<Candle> history = apiClient.fetchStockHistory(s.getSymbol());
+                            
+                            // Store it in the stock object
+                            s.setHistoricalPrices(history); 
+                            
+                            // Optional: Update Open/High/Low from the latest history candle 
+                            // if the live quote didn't provide it
+                            if (!history.isEmpty()) {
+                                 Candle latest = history.get(history.size() - 1);
+                                 // You might need setters in Stock.java for these
+                                 s.setOpenPrice(latest.getOpen());
+                                 s.setHighPrice(latest.getHigh());
+                                 s.setLowPrice(latest.getLow());
+                            }
+                            
+                        } catch (Exception e) {
+                            System.err.println("Could not fetch history for " + s.getSymbol());
+                        }
+                    }
+
+                    return stocks;
             }
             
             @Override

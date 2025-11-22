@@ -1,5 +1,6 @@
 package com.models;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -12,17 +13,17 @@ public class Transaction {
     private String symbol;
     private int quantity;
     private double price;
-    private LocalDateTime timestamp;
+    private Timestamp timestamp;
     
     public Transaction(String type, String symbol, int quantity, double price) {
         this.type = type;
         this.symbol = symbol;
         this.quantity = quantity;
         this.price = price;
-        this.timestamp = LocalDateTime.now();
+        this.timestamp = Timestamp.valueOf(LocalDateTime.now());
     }
     
-    public Transaction(int id, String type, String symbol, int quantity, double price, LocalDateTime timestamp) {
+    public Transaction(int id, String type, String symbol, int quantity, double price, Timestamp timestamp) {
         this.id = id;
         this.type = type;
         this.symbol = symbol;
@@ -41,12 +42,12 @@ public class Transaction {
     public String getSymbol() { return symbol; }
     public int getQuantity() { return quantity; }
     public double getPrice() { return price; }
-    public LocalDateTime getTimestamp() { return timestamp; }
+    public Timestamp getTimestamp() { return timestamp; }
     
     @Override
     public String toString() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         return type + " " + quantity + " " + symbol + " @ $" + 
-               String.format("%.2f", price) + " (" + timestamp.format(formatter) + ")";
+               String.format("%.2f", price) + " (" + timestamp+")";
     }
 }

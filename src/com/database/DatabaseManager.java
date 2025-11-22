@@ -68,7 +68,7 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     			+ "type VARCHAR(10) NOT NULL,"
     			+ "qty INTEGER NOT NULL,"
     			+ "price FLOAT NOT NULL,"
-    			+ "timestamp TIME NOT NULL,"
+    			+ "timestamp TIMESTAMPTZ NOT NULL,"
     			+ "FOREIGN KEY (portfolio_id) REFERENCES portfolio(id))");
     	
     	stat.close();
@@ -153,7 +153,7 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     	
     	while(rs.next()) {
     		portfolio.addHolding(
-    				rs.getString("symbol"),
+    				rs.getString("symbl"),
     				rs.getInt("qty"),
     				rs.getDouble("avg_price")
     		);
@@ -195,14 +195,14 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     
     public void updateHolding(int portfolioId, String symbol, int newQuantity) throws SQLException {
         if (newQuantity <= 0) {
-            String deleteSql = "DELETE FROM holdings WHERE portfolio_id = ? AND symbol = ?";
+            String deleteSql = "DELETE FROM holdings WHERE portfolio_id = ? AND symbl = ?";
             PreparedStatement pstmt = con.prepareStatement(deleteSql);
             pstmt.setInt(1, portfolioId);
             pstmt.setString(2, symbol);
             pstmt.executeUpdate();
             pstmt.close();
         } else {
-            String updateSql = "UPDATE holdings SET quantity = ? WHERE portfolio_id = ? AND symbol = ?";
+            String updateSql = "UPDATE holdings SET qty = ? WHERE portfolio_id = ? AND symbl = ?";
             PreparedStatement pstmt = con.prepareStatement(updateSql);
             pstmt.setInt(1, newQuantity);
             pstmt.setInt(2, portfolioId);
@@ -213,14 +213,14 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
     }
     
     public void saveTransactions(int portfolioId, Transaction transaction) throws SQLException{
-    	String sql = "INSERT INTO transaction (portfolio_id, type, symbl, qty, price,timestamp) VALUES (?,?,?,?,?,?)";
+    	String sql = "INSERT INTO transactions (portfolio_id, type, symbl, qty, price,timestamp) VALUES (?,?,?,?,?,?)";
     	PreparedStatement stmt = con.prepareStatement(sql);
     	stmt.setInt(1, portfolioId);
     	stmt.setString(2,  transaction.getType());
     	stmt.setString(3, transaction.getSymbol());
     	stmt.setInt(4, transaction.getQuantity());
     	stmt.setDouble(5,  transaction.getPrice());
-    	stmt.setString(6, transaction.getTimestamp().toString());
+    	stmt.setTimestamp(6, transaction.getTimestamp());
     	stmt.executeUpdate();
     	stmt.close();
     }
@@ -235,10 +235,10 @@ private static final String DB_URL = "jdbc:postgresql://localhost:5432/stock";
             Transaction transaction = new Transaction(
                 rs.getInt("id"),
                 rs.getString("type"),
-                rs.getString("symbol"),
-                rs.getInt("quantity"),
+                rs.getString("symbl"),
+                rs.getInt("qty"),
                 rs.getDouble("price"),
-                LocalDateTime.parse(rs.getString("timestamp"))
+                rs.getTimestamp("timestamp")
             );
             portfolio.addTransaction(transaction);
         }
