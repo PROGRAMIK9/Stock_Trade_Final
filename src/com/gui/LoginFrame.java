@@ -67,7 +67,7 @@ public class LoginFrame extends JFrame {
         registerButton = new JButton("Register");
         
         loginButton.setBackground(new Color(46, 204, 113));
-        loginButton.setForeground(Color.WHITE);
+        loginButton.setForeground(Color.BLACK);
         loginButton.setFocusPainted(false);
         
         registerButton.setBackground(new Color(52, 152, 219));

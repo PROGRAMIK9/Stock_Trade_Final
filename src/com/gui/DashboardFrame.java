@@ -333,7 +333,7 @@ public class DashboardFrame extends JFrame {
 	        }
         }
         else {
-        	cashBalanceLabel.setText("Cash:0.0");
+        	cashBalanceLabel.setText("Cash:100000.0");
         }
         
         
