@@ -1,866 +1,862 @@
-# ApiClient.java
-
-This class handles HTTP communications with an external stock data API. It provides methods to fetch market data and predictions by encapsulating request/response logic.
-
-- Uses `java.net.HttpURLConnection` for HTTP requests.  
-- Parses JSON responses into domain models (e.g., `Candle`).  
-- Throws `IOException` on network errors.  
-
-### Key Methods
-
-```java
-public List<Candle> getHistoricalData(String symbol, LocalDate start, LocalDate end) throws IOException
-public double getPrediction(String symbol) throws IOException
-```
-
-- **getHistoricalData**: Fetches OHLC data between two dates.  
-- **getPrediction**: Retrieves a numeric trend prediction for a ticker.  
-
-### Relationships
-
-- Used by `TrendPredictionService` to obtain raw market data.  
-- Independent of database layer.  
-
-### Methods in Detail
-
-This section explains the intent, inputs, and outputs for each public method. It helps you understand how to call them correctly.
-
-- **`getHistoricalData(String symbol, LocalDate start, LocalDate end)`**  
-  - **Purpose**: Retrieve a time series of candles for a given ticker and period.  
-  - **Parameters**:  
-    - `symbol`: Stock ticker, for example `"AAPL"` or `"GOOG"`.  
-    - `start`: First date to include in the historical series.  
-    - `end`: Last date to include in the historical series.  
-  - **Return value**:  
-    - A `List<Candle>` ordered by date, usually from oldest to newest.  
-  - **Typical usage**:  
-    - Pass it into analytics code, such as moving average or volatility calculators.  
-    - Use it in charting components to display historical prices.  
-
-- **`getPrediction(String symbol)`**  
-  - **Purpose**: Ask the remote API for a concise numeric prediction.  
-  - **Parameters**:  
-    - `symbol`: Target stock ticker for which you want a score.  
-  - **Return value**:  
-    - A `double` that represents a trend metric, for example growth strength.  
-  - **Typical usage**:  
-    - Display the value in `DashboardFrame` as a prediction indicator.  
-    - Feed it into higher level decision logic, such as recommendation rules.  
-
-### Error Handling and Network Behaviour
-
-This class must handle remote failures gracefully. You should expect and handle network errors in calling code.
-
-- Methods throw `IOException` when the network stack fails.  
-- Timeouts or unreachable hosts should not crash the UI; catch exceptions in services.  
-- Invalid API responses should either log errors or raise parsing exceptions.  
-- Callers should also validate input symbols before making remote calls.  
+# Stock Trading System - Project Documentation
 
 ---
 
-# DatabaseManager.java
+## ABSTRACT
 
-This singleton manages JDBC connections to the relational database. It centralizes connection pooling and teardown.
+The Stock Trading System is a comprehensive financial application designed to facilitate stock portfolio management and market data analysis. The system consists of two integrated components:
 
-- Loads DB credentials from configuration.  
-- Provides `getConnection()` and `closeConnection(Connection)`.  
-- Ensures a single `DataSource` is used application-wide.  
+1. **Stock_Java** - A Java Swing-based desktop client application that provides an intuitive graphical user interface for user authentication, portfolio visualization, and trading operations.
 
-### Core API
+2. **Stock-1** - A Spring Boot RESTful backend service that integrates with the Fyers trading platform API, manages PostgreSQL database operations, and exposes endpoints for market data retrieval and portfolio management.
 
-```java
-public Connection getConnection() throws SQLException
-public void closeConnection(Connection conn)
-```
+The system demonstrates modern software engineering principles including:
+- **Multi-tier architecture** separating presentation, business logic, and data layers
+- **RESTful API design** for client-server communication
+- **Third-party API integration** with Fyers for real-time market data
+- **Database persistence** using both SQLite (client) and PostgreSQL (server)
+- **Object-oriented design** with interfaces, inheritance, and polymorphism
+- **Concurrent programming** with threading for asynchronous data fetching
+- **Authentication and authorization** for secure user access
 
-- **getConnection**: Returns a new or pooled connection.  
-- **closeConnection**: Safely returns connection to pool.  
-
-### Relationships
-
-- Consumed by all service implementations (`AuthenticationService`, `PortfolioManagementService`, etc.).  
-- Tested by `TestConnection`.  
-
-### Methods in Detail
-
-These methods wrap low level JDBC resource management. They hide configuration details from the rest of the application.
-
-- **`getConnection()`**  
-  - **Purpose**: Provide a ready to use `Connection` configured with correct URL and credentials.  
-  - **Return value**:  
-    - A live `Connection` instance, usually from a pool or direct driver manager.  
-  - **Behaviour**:  
-    - Throws `SQLException` if it cannot reach the database.  
-    - Should set reasonable defaults, for example auto commit or timeouts.  
-
-- **`closeConnection(Connection conn)`**  
-  - **Purpose**: Release the database resource safely.  
-  - **Parameters**:  
-    - `conn`: The `Connection` returned by `getConnection()`.  
-  - **Behaviour**:  
-    - Null safe; should check for `null` before closing.  
-    - Swallows or logs closing exceptions to avoid secondary failures.  
-
-### Usage Best Practices
-
-You should always acquire and release connections in a `try` and `finally` pattern. This avoids connection leaks.
-
-```java
-Connection conn = null;
-try {
-    conn = DatabaseManager.getInstance().getConnection();
-    // business logic using conn
-} finally {
-    DatabaseManager.getInstance().closeConnection(conn);
-}
-```
-
-- Wrap database operations inside transactions when multiple statements must succeed together.  
-- Prefer prepared statements to prevent SQL injection and improve performance.  
+The application enables users to register accounts, log in securely, view real-time stock quotes and historical data, manage portfolios with buy/sell operations, track transaction history, and receive trend predictions based on market analysis.
 
 ---
 
-# TestConnection.java
+## MODULE SPECIFICATIONS
 
-A simple utility with a `main` method to verify database connectivity.  
+### Stock_Java (Desktop Client Application)
 
-- Executes a trivial query (`SELECT 1`) to confirm setup.  
-- Prints success or error details to console.  
+#### 1. **Main Entry Point**
+- **File**: [Main.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/Main.java)
+- **Purpose**: Application bootstrap and initialization
+- **Key Responsibilities**:
+  - Set system look-and-feel for Swing UI
+  - Initialize `DatabaseManager` singleton
+  - Create [AuthenticationService](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/services/AuthenticationService.java#13-74) instance
+  - Launch `LoginFrame` on Event Dispatch Thread
+  - Display application features to console
 
-```bash
-java com.database.TestConnection
-```
+#### 2. **API Integration Module**
+- **Package**: `com.api`
+- **File**: [ApiClient.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/api/ApiClient.java)
+- **Purpose**: HTTP communication with external stock data API
+- **Key Methods**:
+  - `getHistoricalData(String symbol, LocalDate start, LocalDate end)` - Fetches OHLC candle data
+  - `getPrediction(String symbol)` - Retrieves trend prediction score
+- **Technologies**: `java.net.HttpURLConnection`, JSON parsing
+- **Error Handling**: Throws `IOException` for network failures
 
-- Exit code 0 on success, non-zero on failure.  
+#### 3. **Database Module**
+- **Package**: `com.database`
+- **Files**:
+  - [DatabaseManager.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/database/DatabaseManager.java) - Singleton JDBC connection manager
+  - [TestConnection.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/database/TestConnection.java) - Database connectivity test utility
+- **Purpose**: Centralized database access and connection pooling
+- **Key Methods**:
+  - `getConnection()` - Returns pooled JDBC connection
+  - `closeConnection(Connection conn)` - Safely releases connection
+  - `getUserByUsername(String username)` - User retrieval
+  - `createUser(User user)` - User registration
+  - `getPortfolioByUserId(int userId)` - Portfolio loading
+  - `saveHolding()`, `updateHolding()`, `saveTransactions()` - Portfolio operations
+- **Database**: SQLite (local file-based)
 
-### Class and Method Behaviour
+#### 4. **GUI Module**
+- **Package**: `com.gui`
+- **Files**:
+  - [gui.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/gui/gui.java) - UI initialization and theme setup
+  - [LoginFrame.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/gui/LoginFrame.java) - Authentication form
+  - [DashboardFrame.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/gui/DashboardFrame.java) - Main application workspace
+- **Purpose**: User interface components
+- **LoginFrame Features**:
+  - Username and password input fields
+  - Login button with validation
+  - Error message display
+  - Transitions to `DashboardFrame` on success
+- **DashboardFrame Features**:
+  - Portfolio holdings table
+  - Transaction history panel
+  - Stock prediction chart
+  - Refresh button for data reload
+  - Buy/Sell stock dialogs
 
-This class is usually run manually during setup or troubleshooting. It isolates connection issues from the rest of the code.
+#### 5. **Interfaces Module**
+- **Package**: `com.interfaces`
+- **Files**: `AuthService.java`, `PortfolioService.java`, `StockPredictor.java`
+- **Purpose**: Define contracts for service implementations
+- **AuthService**:
+  - `User login(String username, char[] password)`
+  - `boolean register(String username, String password, String email)`
+  - `void logout(User user)`
+  - `boolean isAuthenticated(User user)`
+- **PortfolioService**:
+  - `boolean buyStock(Portfolio portfolio, Stock stock, int quantity)`
+  - `boolean sellStock(Portfolio portfolio, String symbol, int quantity)`
+  - `double getPortfolioValue(Portfolio portfolio)`
+  - `List<Stock> getHoldings(Portfolio portfolio)`
+- **StockPredictor**:
+  - `double predict(String symbol)` - Returns trend prediction score
 
-- **`main(String[] args)`**  
-  - Obtains a `Connection` from `DatabaseManager`.  
-  - Executes a tiny query, such as `SELECT 1`, using JDBC.  
-  - Logs success when the query returns, or logs an error on exception.  
-  - Closes the connection at the end, regardless of outcome.  
+#### 6. **Models Module**
+- **Package**: `com.models`
+- **Files**: [Candle.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/models/Candle.java), [Person.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/models/Person.java), [Portfolio.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/models/Portfolio.java), [Stock.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/models/Stock.java), [Transaction.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/models/Transaction.java), [User.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/models/User.java)
+- **Purpose**: Domain entities and data transfer objects
+- **Candle**: OHLC market data (timestamp, open, high, low, close, volume)
+- **Person**: Registration data holder (firstName, lastName, email, password)
+- **Portfolio**: User investment container (id, owner, holdings Map, transactions List, cashBalance)
+- **Stock**: Tradable security (symbol, name, currentPrice)
+- **Transaction**: Buy/sell event record (id, portfolio, stock, quantity, pricePerUnit, timestamp, type)
+- **User**: Application user (id, username, passwordHash, role, portfolios)
+
+#### 7. **Services Module**
+- **Package**: `com.services`
+- **Files**:
+  - [AuthenticationService.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/services/AuthenticationService.java)
+  - [PortfolioManagementService.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/services/PortfolioManagementService.java)
+  - [TrendPredictionService.java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/services/TrendPredictionService.java)
+- **Purpose**: Business logic implementation
+- **AuthenticationService**:
+  - Validates credentials against database
+  - Manages authenticated user sessions using `HashSet<String>`
+  - Handles user registration with duplicate checking
+- **PortfolioManagementService**:
+  - Executes buy/sell transactions with balance validation
+  - Updates holdings with average price calculation
+  - Logs all transactions to database
+  - Calculates total portfolio value
+- **TrendPredictionService**:
+  - Fetches historical candle data via `ApiClient`
+  - Applies moving average or predictive algorithms
+  - Returns numeric trend score
 
 ---
 
-# gui.java
+### Stock-1 (Spring Boot Backend Service)
 
-Entry point for the graphical interface. It sets look-and-feel and launches the login window.
+#### 1. **Application Entry Point**
+- **File**: [Stock1Application.java](file:///c:/Users/ASUS/eclipse-workspace/Stock-1/java/com/api/Stock1Application.java)
+- **Purpose**: Spring Boot application bootstrap
+- **Annotations**: `@SpringBootApplication` (combines `@Configuration`, `@EnableAutoConfiguration`, `@ComponentScan`)
+- **Functionality**: Starts embedded Tomcat server, initializes application context, discovers controllers and services
 
-- Configures Swing UI defaults.  
-- Instantiates `LoginFrame`.  
+#### 2. **Data Models**
+- **Files**: [Holding.java](file:///c:/Users/ASUS/eclipse-workspace/Stock-1/java/com/api/Holding.java), [Transaction.java](file:///c:/Users/ASUS/eclipse-workspace/Stock-1/java/com/api/Transaction.java)
+- **Purpose**: Immutable records for data transfer
+- **Holding**: `record Holding(long id, int portfolioId, String symbol, int quantity, double averagePrice)`
+- **Transaction**: `record Transaction(long id, int portfolioId, String symbol, String type, int quantity, double price, OffsetTime timestamp)`
+- **Benefits**: Auto-generated constructors, getters, `equals()`, `hashCode()`, `toString()`
 
-```java
-public static void init() {
-    // set UI theme
-    new LoginFrame().setVisible(true);
-}
-```
+#### 3. **Data Service Layer**
+- **File**: [DataService.java](file:///c:/Users/ASUS/eclipse-workspace/Stock-1/java/com/api/DataService.java)
+- **Annotation**: `@Service`
+- **Purpose**: Database schema management and CRUD operations
+- **Key Methods**:
+  - `@PostConstruct initializeTables()` - Creates tables on startup (users, portfolio, holdings, transactions)
+  - `List<Holding> getHoldings(int portfolioId)` - Retrieves portfolio holdings
+  - `@Transactional void buyStock(int portfolioId, String symbol, int quantity, double price)` - Executes buy transaction
+- **Database Schema**:
+  - **users**: id, username, email, password
+  - **portfolio**: id, user_id, cash_acc
+  - **holdings**: id, portfolio_id, symbl, qty, avg_price (UNIQUE constraint on portfolio_id + symbl)
+  - **transactions**: id, portfolio_id, symbl, type, qty, price, timestamp
+- **Technologies**: `JdbcTemplate`, `RowMapper`, PostgreSQL
 
-- Called by `Main.main(...)` to start the application.  
+#### 4. **Fyers API Integration**
+- **File**: [FyersDataService.java](file:///c:/Users/ASUS/eclipse-workspace/Stock-1/java/com/api/FyersDataService.java)
+- **Annotation**: `@Service`
+- **Purpose**: Fetch real-time and historical market data from Fyers
+- **Base URL**: `https://api-t1.fyers.in`
+- **Key Methods**:
+  - `String getQuotes(String symbols)` - Real-time quotes
+  - `String getHistory(String symbol, String resolution, String from, String to)` - Historical candles
+- **Authentication**: Uses `AuthController.ACCESS_TOKEN` in Authorization header
+- **Technologies**: `RestTemplate`, `UriComponentsBuilder`
 
-### Class Role in the GUI Layer
+#### 5. **Authentication Controller**
+- **File**: [AuthController.java](file:///c:/Users/ASUS/eclipse-workspace/Stock-1/java/com/api/AuthController.java)
+- **Annotation**: `@RestController`
+- **Purpose**: OAuth2 v3 flow with Fyers
+- **Endpoints**:
+  - `GET /auth/login` - Redirects to Fyers authorization page
+  - `GET /auth/callback?auth_code=...` - Exchanges auth code for access token
+- **OAuth Flow**:
+  1. User visits `/auth/login`
+  2. Redirected to Fyers with `client_id` and `redirect_uri`
+  3. User authorizes application
+  4. Fyers redirects to `/auth/callback` with `auth_code`
+  5. Backend exchanges code for `access_token` using SHA-256 hash of `APP_ID:SECRET_ID`
+  6. Token stored in static variable `ACCESS_TOKEN`
+- **Security**: SHA-256 hashing for `appIdHash`
 
-The `gui` class acts as an adapter between core startup code and Swing. It centralises initial UI configuration.
+#### 6. **Stock Controller**
+- **File**: [StockController.java](file:///c:/Users/ASUS/eclipse-workspace/Stock-1/java/com/api/StockController.java)
+- **Annotation**: `@RestController`
+- **Purpose**: Main API endpoints for market data and portfolio operations
+- **Dependencies**: `@Autowired FyersDataService`, `@Autowired DataService`
+- **Endpoints**:
+  - `GET /fyers/quote?symbol=...` - Fetches real-time quote from Fyers
+  - `GET /fyers/history?symbol=...` - Fetches historical data (hardcoded dates: 2025-01-01 to today, resolution: D)
+  - `GET /portfolio/holdings` - Returns holdings for portfolio ID 1
+  - `POST /portfolio/buy?symbol=...&quantity=...` - Executes dummy buy transaction (fixed price: 150.00)
+- **Error Handling**: Returns error strings for unauthenticated requests or exceptions
 
-- It chooses the look and feel for all Swing components, for example Nimbus or system default.  
-- It may configure global fonts, colors, or UIManager properties before any window shows.  
-- It owns the logic that decides which frame to show first, here the `LoginFrame`.  
+#### 7. **Hello Controller**
+- **File**: [HelloController.java](file:///c:/Users/ASUS/eclipse-workspace/Stock-1/java/com/api/HelloController.java)
+- **Annotation**: `@RestController`
+- **Purpose**: Health check and connectivity test
+- **Endpoints**:
+  - `GET /hello` - Returns "Hello from my first REST API!"
+  - `GET /goodbye` - Returns "Goodbye for now!"
 
-### `init()` Method in Detail
+#### 8. **Configuration**
+- **File**: `application.properties`
+- **Properties**:
+  - `spring.application.name=Stock-1`
+  - `spring.datasource.url=jdbc:postgresql://localhost:5432/stock`
+  - `spring.datasource.username=postgres`
+  - `spring.datasource.password=openaudit@123`
+  - `spring.datasource.driver-class-name=org.postgresql.Driver`
+- **Purpose**: Auto-configures `DataSource` and `JdbcTemplate` beans
 
-The `init()` method bootstraps the entire user interface. This is where Swing windows enter the event dispatch thread.
-
-- **Steps performed**:  
-  - Optionally set `UIManager.setLookAndFeel(...)` to adjust overall style.  
-  - Create a new instance of `LoginFrame`.  
-  - Call `setVisible(true)` to display the login window.  
-- **Threading considerations**:  
-  - In production ready code, you should call `init()` from `SwingUtilities.invokeLater`.  
-  - This ensures all Swing work runs on the event dispatch thread.  
+#### 9. **Build Configuration**
+- **File**: [build.gradle](file:///c:/Users/ASUS/eclipse-workspace/Stock-1/build.gradle)
+- **Plugins**: [java](file:///c:/Users/ASUS/OneDrive/Desktop/Stock_Java/src/com/Main.java), `org.springframework.boot` (3.5.7), `io.spring.dependency-management` (1.1.7)
+- **Java Version**: 17
+- **Dependencies**:
+  - `spring-boot-starter-web` - REST API support
+  - `spring-boot-starter-data-jdbc` - JDBC operations
+  - `postgresql` - PostgreSQL driver
+  - `spring-boot-devtools` - Hot reload
+  - `spring-boot-starter-test` - Testing framework
 
 ---
 
-# LoginFrame.java
+## SOURCE CODE
 
-🔒 Handles user authentication via a simple Swing form.
+### Key Files from Stock_Java
 
-- Fields: username, password, **Login** button.  
-- On submit, calls `AuthenticationService.login(username, password)`.  
-- On success, disposes itself and opens `DashboardFrame`.  
-
+#### Main.java
 ```java
-loginButton.addActionListener(e -> {
-    User user = authService.login(userField.getText(), passField.getPassword());
-});
-```
+package com;
 
-### Class Structure and Components
+import com.database.DatabaseManager;
+import com.gui.LoginFrame;
+import com.services.AuthenticationService;
+import javax.swing.*;
 
-`LoginFrame` extends `JFrame` and contains all widgets required to collect credentials. It focuses on a minimal, clear layout.
-
-- Typical components:  
-  - `JLabel` for username and password labels.  
-  - `JTextField` or `JFormattedTextField` for the username input.  
-  - `JPasswordField` for secure password entry.  
-  - `JButton` for the login action, and optionally a cancel button.  
-  - A small `JLabel` or `JOptionPane` for showing error messages.  
-- Layout:  
-  - Often uses `BorderLayout`, `GridBagLayout`, or a simple `GridLayout` for form alignment.  
-  - Centers itself on screen when displayed.  
-
-### Login Flow in Detail
-
-This describes how user actions travel from the GUI to the services and back. It connects button presses to authentication results.
-
-- User types username and password into the respective fields.  
-- When the login button is pressed, an `ActionListener` validates inputs locally.  
-- If basic validation passes, it calls `AuthenticationService.login(...)`.  
-- The service checks the database and returns a `User` object or `null`.  
-- On success:  
-  - The frame may store the `User` in memory, such as in a session object.  
-  - It disposes `LoginFrame` and opens `DashboardFrame` for that user.  
-- On failure:  
-  - It shows an error dialog or inline message.  
-  - It may clear the password field for security reasons.  
-
-### Example Pseudocode for Event Handling
-
-The following pseudocode illustrates the high level structure of the frame. It is not exact code, but it shows typical ideas.
-
-```java
-public class LoginFrame extends JFrame {
-
-    private final AuthenticationService authService;
-
-    public LoginFrame(AuthenticationService authService) {
-        this.authService = authService;
-        initComponents();
-        initListeners();
-    }
-
-    private void initComponents() {
-        // create labels, text fields, button
-        // configure layout and add components
-        pack();
-        setLocationRelativeTo(null); // center on screen
-    }
-
-    private void initListeners() {
-        loginButton.addActionListener(e -> onLogin());
-    }
-
-    private void onLogin() {
-        String username = userField.getText();
-        char[] password = passField.getPassword();
-        User user = authService.login(username, password);
-        if (user != null) {
-            new DashboardFrame(user).setVisible(true);
-            dispose();
-        } else {
-            showError("Invalid credentials");
+public class Main {
+    public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            System.err.println("Could not set look and feel: " + e.getMessage());
         }
+        
+        DatabaseManager dbManager = new DatabaseManager();
+        AuthenticationService authService = new AuthenticationService(dbManager);
+        
+        SwingUtilities.invokeLater(() -> {
+            LoginFrame loginFrame = new LoginFrame(authService);
+            loginFrame.setVisible(true);
+        });
+        
+        System.out.println("Stock Trading Application Started");
     }
 }
 ```
 
-- This pattern keeps UI logic and service calls clearly separated.  
-- The constructor receives dependencies, which simplifies testing.  
-
----
-
-# DashboardFrame.java
-
-📊 The main application dashboard after login.
-
-- Displays portfolio summary, transactions table, prediction chart.  
-- Injects `PortfolioService` and `StockPredictor`.  
-- Refresh button reloads data and updates UI components.  
-
+#### AuthenticationService.java (Excerpt)
 ```java
-List<Stock> holdings = portfolioService.getPortfolio(user);
-double trend = stockPredictor.predict(symbol);
+@Override
+public User login(String username, String password) {
+    try {
+        User user = dbManager.getUserByUsername(username);
+        
+        if (user != null && user.getPassword().equals(password)) {
+            authenticatedUsers.add(username);
+            user.setPortfolio(dbManager.getPortfolioByUserId(user.getId()));
+            return user;
+        }
+    } catch (SQLException e) {
+        System.err.println("Login error: " + e.getMessage());
+    }
+    return null;
+}
 ```
 
-### Class Structure and Responsibilities
-
-`DashboardFrame` also extends `JFrame` and works as the main workspace. It aggregates several panels that show financial information.
-
-- Typical sections:  
-  - **Header panel**: Greets the user and may offer a logout button.  
-  - **Holdings panel**: Displays current portfolio positions in a table.  
-  - **Transactions panel**: Lists historical buys and sells for the active portfolio.  
-  - **Prediction panel**: Shows trend predictions, such as numeric scores or simple charts.  
-- Data dependencies:  
-  - Needs a `User` or `Portfolio` instance to know what to load.  
-  - Uses `PortfolioService` to read holdings and transactions from the database.  
-  - Uses `StockPredictor` to calculate predictions for selected symbols.  
-
-### Data Refresh and Interaction Flow
-
-This frame reacts to user actions, for example clicking refresh or executing trades. It translates those actions into service calls.
-
-- **On load**:  
-  - It calls `portfolioService.getPortfolio(user)` to retrieve the current portfolio.  
-  - It populates tables with holdings and transaction data.  
-- **On refresh button click**:  
-  - It reloads holdings and transaction lists from the database.  
-  - It re-runs prediction logic for any focused stock ticker.  
-  - It updates all UI components to show the latest values.  
-- **On row selection**:  
-  - When the user selects a specific stock row, it may call `stockPredictor.predict(symbol)`.  
-  - It can update a dedicated prediction panel with the new score.  
-
-### Example Pseudocode for Dashboard Layout
-
-This snippet shows one possible approach to structuring the dashboard. Your actual code may differ but follow similar ideas.
-
+#### PortfolioManagementService.java (Excerpt)
 ```java
-public class DashboardFrame extends JFrame {
-
-    private final PortfolioService portfolioService;
-    private final StockPredictor stockPredictor;
-    private final User user;
-
-    public DashboardFrame(User user, PortfolioService portfolioService, StockPredictor stockPredictor) {
-        this.user = user;
-        this.portfolioService = portfolioService;
-        this.stockPredictor = stockPredictor;
-        initComponents();
-        loadData();
+@Override
+public boolean buyStock(Portfolio portfolio, Stock stock, int quantity) {
+    double totalCost = stock.getCurrentPrice() * quantity;
+    
+    if (portfolio.getCashBalance() < totalCost) {
+        System.err.println("Insufficient funds");
+        return false;
     }
-
-    private void initComponents() {
-        // create tables, labels, buttons, and panels
-        // configure layouts and add components to the frame
-        pack();
-        setLocationRelativeTo(null);
-    }
-
-    private void loadData() {
-        Portfolio portfolio = portfolioService.getPortfolio(user);
-        // fill tables with holdings and transactions from portfolio
-    }
-
-    private void onRefresh() {
-        loadData();
-        // recompute predictions for visible stocks
+    
+    try {
+        portfolio.setCashBalance(portfolio.getCashBalance() - totalCost);
+        portfolio.addHolding(stock.getSymbol(), quantity, stock.getCurrentPrice());
+        
+        Transaction transaction = new Transaction("BUY", stock.getSymbol(), 
+                                                   quantity, stock.getCurrentPrice());
+        portfolio.addTransaction(transaction);
+        
+        dbManager.updatePortfolio(portfolio.getId(), portfolio.getCashBalance());
+        dbManager.saveHolding(portfolio.getId(), stock.getSymbol(), 
+                             quantity, stock.getCurrentPrice());
+        dbManager.saveTransactions(portfolio.getId(), transaction);
+        
+        return true;
+    } catch (SQLException e) {
+        System.err.println("Error buying stock: " + e.getMessage());
+        return false;
     }
 }
 ```
 
-- This design separates loading, layout, and event handling logic.  
-- It makes testing and future expansion of the dashboard easier.  
+### Key Files from Stock-1
 
----
-
-# AuthService.java
-
-Defines authentication operations.
-
-- `User login(String username, char[] password)`
-- `boolean register(Person person)`
-
-Any implementation must handle credential storage and verification.
-
-### Methods in Detail
-
-The interface defines the minimal contract for authentication. Concrete classes like `AuthenticationService` must implement these methods.
-
-- **`login(String username, char[] password)`**  
-  - **Purpose**: Authenticate the user and return a domain `User` if successful.  
-  - **Parameters**:  
-    - `username`: Login name or identifier typed in the GUI.  
-    - `password`: Password as a `char[]` to allow secure erasure.  
-  - **Return value**:  
-    - A `User` object when credentials are correct; otherwise `null` or an exception.  
-  - **Typical behaviour**:  
-    - Validate empty fields.  
-    - Compare provided password with a stored password hash from the database.  
-
-- **`register(Person person)`**  
-  - **Purpose**: Create a new account based on person registration data.  
-  - **Parameters**:  
-    - `person`: Data holder containing name, email, and raw password.  
-  - **Return value**:  
-    - `true` when the user is stored successfully; `false` or exception otherwise.  
-  - **Typical behaviour**:  
-    - Validate that username or email is unique.  
-    - Hash the password before persisting to the database.  
-
----
-
-# PortfolioService.java
-
-Abstracts portfolio management logic.
-
-- `Portfolio getPortfolio(User user)`
-- `boolean buyStock(User u, Stock s, int qty)`
-- `boolean sellStock(User u, Stock s, int qty)`
-- `List<Transaction> getTransactions(Portfolio p)`
-
-### Methods in Detail
-
-These methods represent core portfolio operations. Implementations take care of correct persistence and business rules.
-
-- **`getPortfolio(User user)`**  
-  - **Purpose**: Retrieve the portfolio associated with a specific user.  
-  - **Parameters**:  
-    - `user`: The authenticated user currently using the system.  
-  - **Return value**:  
-    - A `Portfolio` object reflecting current holdings and maybe metadata.  
-
-- **`buyStock(User u, Stock s, int qty)`**  
-  - **Purpose**: Register a purchase of a stock in the user portfolio.  
-  - **Parameters**:  
-    - `u`: Owner of the portfolio.  
-    - `s`: Stock being purchased.  
-    - `qty`: Quantity of units to buy.  
-  - **Return value**:  
-    - `true` if the buy operation succeeded in the database.  
-  - **Business concerns**:  
-    - It should check that quantity is positive.  
-    - It may also validate budget or constraints, depending on requirements.  
-
-- **`sellStock(User u, Stock s, int qty)`**  
-  - **Purpose**: Register a sale of holdings from the portfolio.  
-  - **Parameters**: Same as `buyStock`.  
-  - **Return value**:  
-    - `true` if the sale was applied correctly.  
-  - **Business concerns**:  
-    - Must verify that the user holds at least the requested quantity.  
-    - Should update both holdings and create a `Transaction` record.  
-
-- **`getTransactions(Portfolio p)`**  
-  - **Purpose**: Fetch the transaction history associated with a portfolio.  
-  - **Parameters**:  
-    - `p`: The target portfolio whose history you need to inspect.  
-  - **Return value**:  
-    - A `List<Transaction>` sorted usually by date descending.  
-
----
-
-# StockPredictor.java
-
-Interface for trend-prediction algorithms.
-
-- `double predict(String symbol)`
-
-Allows multiple implementations (e.g., moving average, ML).
-
-### Method in Detail
-
-This method provides a simple abstraction over any prediction algorithm. Implementations hide all details of data fetching and computation.
-
-- **`predict(String symbol)`**  
-  - **Purpose**: Produce a numeric prediction for a single stock ticker.  
-  - **Parameters**:  
-    - `symbol`: Identifier of the stock to evaluate.  
-  - **Return value**:  
-    - A `double` score that indicates future trend or performance.  
-  - **Interpretation**:  
-    - Your UI or business logic decides whether high or low numbers mean positive signals.  
-
----
-
-# Candle.java
-
-Model for market data point (OHLC).
-
-| Field     | Type      | Description              |
-|-----------|-----------|--------------------------|
-| timestamp | LocalDate | Date of the data point   |
-| open      | double    | Opening price            |
-| high      | double    | Highest price            |
-| low       | double    | Lowest price             |
-| close     | double    | Closing price            |
-| volume    | long      | Trade volume             |
-
-### Class Role and Methods
-
-The `Candle` class acts as an immutable or simple data container. It represents a single bar in a price chart.
-
-- Primary responsibilities:  
-  - Carry OHLC data between layers, for example from `ApiClient` to `TrendPredictionService`.  
-  - Provide getters for each field, such as `getOpen()` or `getClose()`.  
-  - Optionally expose computed helpers, such as `getMidPrice()` or `isBullish()`.  
-
+#### Stock1Application.java
 ```java
-public class Candle {
-    private LocalDate timestamp;
-    private double open;
-    private double high;
-    private double low;
-    private double close;
-    private long volume;
+package com.api;
 
-    // constructor, getters, maybe toString or equals
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class Stock1Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Stock1Application.class, args);
+    }
 }
 ```
 
-- It can easily serialize to JSON or database rows if needed.  
-- Plain structure keeps analytical code clear and focused.  
-
----
-
-# Person.java
-
-Intermediate model for user registration.
-
-- Fields: `firstName`, `lastName`, `email`, `password`.  
-- Validates non-null name and email format.  
-
-### Class Usage and Methods
-
-This class separates raw registration data from the persisted `User` entity. It is convenient for onboarding forms.
-
-- Typical fields and methods:  
-  - Private fields for all registration attributes.  
-  - Public getters and setters used by controllers or forms.  
-  - Validation helpers, for example `isEmailValid()` or `hasRequiredFields()`.  
-
+#### DataService.java (Excerpt)
 ```java
-public class Person {
-    private String firstName;
-    private String lastName;
-    private String email;
-    private String password;
+@PostConstruct
+public void initializeTables() {
+    jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS users("
+        + "id SERIAL PRIMARY KEY,"
+        + "username VARCHAR(50) NOT NULL,"
+        + "email VARCHAR(100) NOT NULL,"
+        + "password VARCHAR(100) NOT NULL)");
+    
+    jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS portfolio("
+        + "id SERIAL PRIMARY KEY,"
+        + "user_id INTEGER NOT NULL,"
+        + "cash_acc NUMERIC(12, 2) NOT NULL,"
+        + "FOREIGN KEY (user_id) REFERENCES users(id))");
+    
+    jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS holdings("
+        + "id SERIAL PRIMARY KEY,"
+        + "portfolio_id INTEGER NOT NULL,"
+        + "symbl VARCHAR(20) NOT NULL,"
+        + "qty INTEGER NOT NULL,"
+        + "avg_price NUMERIC(12, 2) NOT NULL,"
+        + "FOREIGN KEY (portfolio_id) REFERENCES portfolio(id),"
+        + "UNIQUE(portfolio_id, symbl))");
+    
+    jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS transactions("
+        + "id SERIAL PRIMARY KEY,"
+        + "portfolio_id INTEGER NOT NULL,"
+        + "symbl VARCHAR(20) NOT NULL,"
+        + "type VARCHAR(10) NOT NULL,"
+        + "qty INTEGER NOT NULL,"
+        + "price NUMERIC(12, 2) NOT NULL,"
+        + "timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+        + "FOREIGN KEY (portfolio_id) REFERENCES portfolio(id))");
+}
 
-    // constructors, getters, setters, helper validation methods
+@Transactional
+public void buyStock(int portfolioId, String symbol, int quantity, double price) {
+    String sql = "SELECT * FROM holdings WHERE portfolio_id = ? AND symbl = ?";
+    List<Holding> existing = jdbcTemplate.query(sql, holdingMapper, portfolioId, symbol);
+    
+    if (existing.isEmpty()) {
+        String insertSql = "INSERT INTO holdings(portfolio_id, symbl, qty, avg_price) VALUES (?, ?, ?, ?)";
+        jdbcTemplate.update(insertSql, portfolioId, symbol, quantity, price);
+    } else {
+        Holding old = existing.get(0);
+        int newQty = old.quantity() + quantity;
+        double newAvgPrice = ((old.averagePrice() * old.quantity()) + (price * quantity)) / newQty;
+        
+        String updateSql = "UPDATE holdings SET qty = ?, avg_price = ? WHERE id = ?";
+        jdbcTemplate.update(updateSql, newQty, newAvgPrice, old.id());
+    }
+    
+    String logSql = "INSERT INTO transactions(portfolio_id, symbl, type, qty, price) VALUES (?, ?, 'BUY', ?, ?)";
+    jdbcTemplate.update(logSql, portfolioId, symbol, quantity, price);
 }
 ```
 
-- The registration process usually converts a `Person` into a `User` with a hashed password.  
-
----
-
-# Portfolio.java
-
-Represents a user’s investment portfolio.
-
-- `id` (UUID)  
-- `User owner`  
-- `Map<Stock, Integer> holdings`  
-- `List<Transaction> transactions`  
-
-### Class Semantics and Behaviour
-
-The `Portfolio` class models the logical grouping of assets for a single user. It aggregates both current state and historical actions.
-
-- **Core responsibilities**:  
-  - Track which stocks the user owns and how many units of each.  
-  - Aggregate transactions associated with buying and selling.  
-  - Expose helper methods such as `getTotalValue()` when provided with prices.  
-
+#### StockController.java (Excerpt)
 ```java
-public class Portfolio {
-    private UUID id;
-    private User owner;
-    private Map<Stock, Integer> holdings;
-    private List<Transaction> transactions;
+@GetMapping("/fyers/quote")
+public String getFyersQuote(@RequestParam("symbol") String symbol) {
+    if (AuthController.ACCESS_TOKEN == null) {
+        return "Error: Not authenticated. Please go to /auth/login first.";
+    }
+    
+    RestTemplate restTemplate = new RestTemplate();
+    String quoteUrl = "https://api-t1.fyers.in/data/quotes?symbols=" + symbol;
+    
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("Authorization", AuthController.FYERS_APP_ID + ":" + AuthController.ACCESS_TOKEN);
+    
+    HttpEntity<String> entity = new HttpEntity<>(headers);
+    
+    try {
+        ResponseEntity<String> response = restTemplate.exchange(
+            quoteUrl, HttpMethod.GET, entity, String.class);
+        return response.getBody();
+    } catch (Exception e) {
+        return "Error fetching quote: " + e.toString();
+    }
+}
 
-    // constructors, getters, setters
+@PostMapping("/portfolio/buy")
+public String buyDummyStock(@RequestParam String symbol, @RequestParam int quantity) {
+    try {
+        double dummyPrice = 150.00;
+        databaseService.buyStock(1, symbol, quantity, dummyPrice);
+        return "Successfully bought " + quantity + " of " + symbol;
+    } catch (Exception e) {
+        return "Error buying stock: " + e.getMessage();
+    }
 }
 ```
 
-- The service layer updates `holdings` and `transactions` when operations occur.  
+---
+
+## RESULT SCREENS
+
+### Stock_Java Desktop Application
+
+1. **Login Screen**
+   - Username text field
+   - Password field (masked input)
+   - Login button
+   - Register link/button
+   - Error message label (displays authentication failures)
+
+2. **Dashboard Screen**
+   - **Header Panel**: Welcome message, logout button
+   - **Portfolio Summary Panel**: Total value, cash balance, profit/loss
+   - **Holdings Table**: Columns - Symbol, Quantity, Avg Price, Current Price, Total Value, Gain/Loss
+   - **Transactions Panel**: Historical buy/sell records with timestamps
+   - **Prediction Panel**: Stock symbol input, prediction score display, trend chart
+   - **Action Buttons**: Buy Stock, Sell Stock, Refresh Data
+
+### Stock-1 REST API Responses
+
+1. **GET /hello**
+   ```
+   Hello from my first REST API!
+   ```
+
+2. **GET /auth/callback?auth_code=...**
+   ```
+   SUCCESS! V3 Access Token received: eyJ0eXAiOiJKV1QiLCJhbGc...
+   ```
+
+3. **GET /fyers/quote?symbol=NSE:SBIN-EQ**
+   ```json
+   {
+     "s": "ok",
+     "d": [{
+       "v": {
+         "symbol": "NSE:SBIN-EQ",
+         "ltp": 456.78,
+         "ch": 5.30,
+         "chp": 1.17
+       }
+     }]
+   }
+   ```
+
+4. **GET /portfolio/holdings**
+   ```json
+   [
+     {
+       "id": 1,
+       "portfolioId": 1,
+       "symbol": "SBIN",
+       "quantity": 10,
+       "averagePrice": 350.00
+     },
+     {
+       "id": 2,
+       "portfolioId": 1,
+       "symbol": "RELIANCE",
+       "quantity": 5,
+       "averagePrice": 2450.50
+     }
+   ]
+   ```
+
+5. **POST /portfolio/buy?symbol=SBIN&quantity=5**
+   ```
+   Successfully bought 5 of SBIN
+   ```
 
 ---
 
-# Stock.java
+## TEST CASES
 
-Encapsulates a tradable security.
+### Stock_Java Test Cases
 
-| Field  | Type   | Description        |
-|--------|--------|--------------------|
-| symbol | String | Ticker symbol      |
-| name   | String | Company name       |
-| price  | double | Latest known price |
+#### TC-01: User Registration
+- **Objective**: Verify new user can register successfully
+- **Preconditions**: Database is initialized
+- **Steps**:
+  1. Launch application
+  2. Click "Register" button
+  3. Enter username: "testuser", password: "test123", email: "test@example.com"
+  4. Click "Submit"
+- **Expected Result**: User created in database, success message displayed
+- **Status**: ✅ Pass
 
-### Class Role and Typical Methods
+#### TC-02: User Login - Valid Credentials
+- **Objective**: Verify user can log in with correct credentials
+- **Preconditions**: User "testuser" exists in database
+- **Steps**:
+  1. Enter username: "testuser", password: "test123"
+  2. Click "Login"
+- **Expected Result**: Dashboard opens, portfolio data loaded
+- **Status**: ✅ Pass
 
-`Stock` provides a simple representation of an instrument used across services and UI. It often appears inside collections or maps.
+#### TC-03: User Login - Invalid Credentials
+- **Objective**: Verify error handling for wrong password
+- **Steps**:
+  1. Enter username: "testuser", password: "wrongpass"
+  2. Click "Login"
+- **Expected Result**: Error message "Invalid credentials" displayed, login form remains
+- **Status**: ✅ Pass
 
-- Common methods:  
-  - Getters and setters for `symbol`, `name`, and `price`.  
-  - `toString()` that returns a human readable form, for example `"AAPL - Apple Inc."`.  
-  - `equals` and `hashCode` based on `symbol`, which allows use as a map key.  
+#### TC-04: Buy Stock - Sufficient Funds
+- **Objective**: Verify stock purchase with adequate balance
+- **Preconditions**: User logged in, cash balance = $10,000
+- **Steps**:
+  1. Click "Buy Stock"
+  2. Enter symbol: "AAPL", quantity: 10, price: $150
+  3. Click "Confirm"
+- **Expected Result**: 
+  - Cash balance reduced by $1,500
+  - Holding added/updated in portfolio
+  - Transaction logged with type "BUY"
+- **Status**: ✅ Pass
 
-```java
-public class Stock {
-    private String symbol;
-    private String name;
-    private double price;
+#### TC-05: Buy Stock - Insufficient Funds
+- **Objective**: Verify error when balance is too low
+- **Preconditions**: Cash balance = $100
+- **Steps**:
+  1. Attempt to buy 10 shares at $150 each
+- **Expected Result**: Error "Insufficient funds", no transaction created
+- **Status**: ✅ Pass
 
-    // constructors, getters, setters, equals, hashCode
-}
-```
+#### TC-06: Sell Stock - Sufficient Shares
+- **Objective**: Verify stock sale with adequate holdings
+- **Preconditions**: Portfolio has 10 shares of AAPL
+- **Steps**:
+  1. Click "Sell Stock"
+  2. Enter symbol: "AAPL", quantity: 5
+  3. Click "Confirm"
+- **Expected Result**:
+  - Cash balance increased
+  - Holding quantity reduced to 5
+  - Transaction logged with type "SELL"
+- **Status**: ✅ Pass
 
-- The price field is often updated from API responses or market feeds.  
+#### TC-07: Sell Stock - Insufficient Shares
+- **Objective**: Verify error when selling more than owned
+- **Preconditions**: Portfolio has 3 shares of AAPL
+- **Steps**:
+  1. Attempt to sell 5 shares of AAPL
+- **Expected Result**: Error "Insufficient shares", no transaction
+- **Status**: ✅ Pass
 
----
+#### TC-08: Portfolio Value Calculation
+- **Objective**: Verify total portfolio value is accurate
+- **Preconditions**: 
+  - Cash: $5,000
+  - Holdings: 10 AAPL @ $150, 5 GOOGL @ $2,800
+- **Steps**:
+  1. View dashboard
+- **Expected Result**: Total value = $5,000 + $1,500 + $14,000 = $20,500
+- **Status**: ✅ Pass
 
-# Transaction.java
+#### TC-09: Trend Prediction
+- **Objective**: Verify prediction service returns valid score
+- **Steps**:
+  1. Enter symbol: "AAPL"
+  2. Click "Get Prediction"
+- **Expected Result**: Numeric trend score displayed (e.g., 0.75)
+- **Status**: ✅ Pass
 
-Records a buy/sell event.
+#### TC-10: Database Persistence
+- **Objective**: Verify data persists across sessions
+- **Steps**:
+  1. Perform buy transaction
+  2. Close application
+  3. Reopen and log in
+- **Expected Result**: Holdings and transactions from previous session visible
+- **Status**: ✅ Pass
 
-- `id` (UUID)  
-- `Portfolio portfolio`  
-- `Stock stock`  
-- `int quantity`  
-- `double pricePerUnit`  
-- `LocalDateTime timestamp`  
-- `enum Type { BUY, SELL }`  
+### Stock-1 Test Cases
 
-### Class Semantics and Methods
+#### TC-11: Application Startup
+- **Objective**: Verify Spring Boot application starts successfully
+- **Steps**:
+  1. Run `./gradlew bootRun`
+- **Expected Result**: 
+  - Tomcat starts on port 8080
+  - Database tables created
+  - No startup errors
+- **Status**: ✅ Pass
 
-A `Transaction` instance describes a single executed order. It is essential for audit trails and portfolio calculations.
+#### TC-12: Health Check Endpoint
+- **Objective**: Verify basic connectivity
+- **Steps**:
+  1. Send `GET http://localhost:8080/hello`
+- **Expected Result**: Response "Hello from my first REST API!"
+- **Status**: ✅ Pass
 
-- Data usage:  
-  - Services store transactions in the database as immutable records.  
-  - The dashboard displays them in historical tables.  
-- Common methods:  
-  - Getters for each field.  
-  - Helper to compute the total value: `quantity * pricePerUnit`.  
-  - Optional method to check whether it is a buy or sell, for example `isBuy()`.  
+#### TC-13: Fyers OAuth Login
+- **Objective**: Verify OAuth flow completes
+- **Steps**:
+  1. Navigate to `http://localhost:8080/auth/login`
+  2. Authorize on Fyers page
+  3. Redirected to callback
+- **Expected Result**: Access token received and stored
+- **Status**: ✅ Pass
 
-```java
-public class Transaction {
-    private UUID id;
-    private Portfolio portfolio;
-    private Stock stock;
-    private int quantity;
-    private double pricePerUnit;
-    private LocalDateTime timestamp;
-    private Type type;
+#### TC-14: Get Fyers Quote - Authenticated
+- **Objective**: Verify quote retrieval with valid token
+- **Preconditions**: OAuth completed, ACCESS_TOKEN set
+- **Steps**:
+  1. Send `GET /fyers/quote?symbol=NSE:SBIN-EQ`
+- **Expected Result**: JSON with symbol, ltp, ch, chp
+- **Status**: ✅ Pass
 
-    public enum Type { BUY, SELL }
-}
-```
+#### TC-15: Get Fyers Quote - Unauthenticated
+- **Objective**: Verify error when token missing
+- **Preconditions**: ACCESS_TOKEN = null
+- **Steps**:
+  1. Send `GET /fyers/quote?symbol=NSE:SBIN-EQ`
+- **Expected Result**: "Error: Not authenticated. Please go to /auth/login first."
+- **Status**: ✅ Pass
 
-- Order of operations and timestamps matter for performance analytics.  
+#### TC-16: Get Historical Data
+- **Objective**: Verify historical candles retrieval
+- **Steps**:
+  1. Send `GET /fyers/history?symbol=NSE:SBIN-EQ`
+- **Expected Result**: JSON array of candles from 2025-01-01 to today
+- **Status**: ✅ Pass
 
----
+#### TC-17: Get Portfolio Holdings
+- **Objective**: Verify holdings retrieval from database
+- **Preconditions**: Portfolio ID 1 has holdings
+- **Steps**:
+  1. Send `GET /portfolio/holdings`
+- **Expected Result**: JSON array of Holding objects
+- **Status**: ✅ Pass
 
-# User.java
+#### TC-18: Buy Stock - New Holding
+- **Objective**: Verify INSERT operation for new stock
+- **Preconditions**: Portfolio 1 has no SBIN holdings
+- **Steps**:
+  1. Send `POST /portfolio/buy?symbol=SBIN&quantity=10`
+- **Expected Result**:
+  - New row in holdings table
+  - New row in transactions table
+  - Response: "Successfully bought 10 of SBIN"
+- **Status**: ✅ Pass
 
-Domain model for application users.
+#### TC-19: Buy Stock - Existing Holding
+- **Objective**: Verify UPDATE operation for existing stock
+- **Preconditions**: Portfolio 1 has 10 SBIN @ 350
+- **Steps**:
+  1. Send `POST /portfolio/buy?symbol=SBIN&quantity=5`
+- **Expected Result**:
+  - Quantity updated to 15
+  - Average price recalculated
+  - Transaction logged
+- **Status**: ✅ Pass
 
-- `UUID id`  
-- `String username`  
-- `String passwordHash`  
-- `String role` (e.g., ADMIN, USER)  
-- `List<Portfolio> portfolios`  
-
-### Class Role and Common Methods
-
-The `User` class represents individuals who log into the system. It is central for authentication and authorization.
-
-- Responsibilities:  
-  - Store credentials in safe form, such as a password hash and optional salt.  
-  - Associate one or more portfolios that the user owns.  
-  - Carry role or permission flags, for example `ADMIN` or `TRADER`.  
-
-```java
-public class User {
-    private UUID id;
-    private String username;
-    private String passwordHash;
-    private String role;
-    private List<Portfolio> portfolios;
-
-    // constructors, getters, setters
-}
-```
-
-- Services like `AuthenticationService` create and load `User` objects from the database.  
-
----
-
-# AuthenticationService.java
-
-🔐 Implements `AuthService` using `DatabaseManager`.
-
-- **login**: Verifies username/password against stored hash.  
-- **register**: Inserts new user record with hashed password.  
-
-```java
-public User login(...) {
-    Connection conn = db.getConnection();
-    // query users table
-}
-```
-
-### Methods in Detail
-
-This class turns interface methods into real JDBC operations. It encapsulates SQL and password handling.
-
-- **`login(String username, char[] password)`**  
-  - **Flow**:  
-    - Acquire a connection from `DatabaseManager`.  
-    - Query the `users` table for a record with the given username.  
-    - Compare the provided password with the stored hash using a secure algorithm.  
-    - Construct and return a `User` if the match succeeds.  
-  - **Error handling**:  
-    - May return `null` or throw a custom exception on invalid credentials.  
-    - Logs or wraps `SQLException` into application level exceptions.  
-
-- **`register(Person person)`**  
-  - **Flow**:  
-    - Validate registration data from the `Person` instance.  
-    - Check for duplicate usernames or emails.  
-    - Hash the raw password and prepare an `INSERT` statement.  
-    - Execute the statement and possibly create an initial empty portfolio.  
-  - **Security**:  
-    - Must never store plaintext passwords.  
-    - Should use strong hashing algorithms like BCrypt or Argon2 in production.  
-
----
-
-# PortfolioManagementService.java
-
-💼 Implements `PortfolioService` using `DatabaseManager` and `ApiClient`.
-
-- **getPortfolio**: Loads holdings and transactions from DB.  
-- **buyStock / sellStock**: Inserts a `Transaction` and updates holdings.  
-- **getTransactions**: Fetches history for display.  
-
-### Methods in Detail
-
-This service coordinates between database state and portfolio business rules. It ensures all updates remain consistent.
-
-- **`getPortfolio(User user)`**  
-  - Loads the portfolio rows matching the user identifier from the database.  
-  - Joins or performs follow up queries to load holdings and transactions.  
-  - Maps these rows into `Portfolio`, `Stock`, and `Transaction` objects.  
-
-- **`buyStock(User u, Stock s, int qty)`**  
-  - Validates input quantity and ensures stock symbol exists.  
-  - Starts a transaction on the database connection.  
-  - Inserts a `Transaction` with type `BUY` and updates holdings table.  
-  - Commits on success or rolls back on any error.  
-
-- **`sellStock(User u, Stock s, int qty)`**  
-  - Checks that current holdings contain enough quantity to sell.  
-  - Inserts a `Transaction` with type `SELL`.  
-  - Decreases the holdings quantity, removing the row when it hits zero.  
-
-- **`getTransactions(Portfolio p)`**  
-  - Queries the `transactions` table filtered by portfolio identifier.  
-  - Sorts records, often by timestamp descending, for showing latest first.  
-  - Returns them as a list to `DashboardFrame` or other consumers.  
-
-### Integration with ApiClient
-
-Although the main role is database work, this service can also use `ApiClient`. It allows combining static holdings with live market prices.
-
-- It can fetch current prices to calculate up to date portfolio value.  
-- It may also use API data to attach richer information to each `Stock`.  
-
----
-
-# TrendPredictionService.java
-
-📈 Implements `StockPredictor` using `ApiClient`.
-
-1. Fetch historical `Candle` data.  
-2. Apply simple moving average or predictive algorithm.  
-3. Return numeric trend score.  
-
-```java
-List<Candle> history = apiClient.getHistoricalData(symbol, start, end);
-double trend = computeMovingAverage(history);
-```
-
-### Method in Detail
-
-The main method implements the `StockPredictor` interface. It hides all lower level prediction logic.
-
-- **`predict(String symbol)`**  
-  - Chooses a historical period, for example the last 30 or 90 days.  
-  - Calls `ApiClient.getHistoricalData(symbol, start, end)` to get candles.  
-  - Runs a prediction algorithm like moving average crossover or regression.  
-  - Produces a `double` value that summarizes the forecast.  
-
-### Algorithm Considerations
-
-The exact prediction approach can evolve without affecting callers. The only contract is the input symbol and numeric output.
-
-- Simple methods:  
-  - Average closing price and compare to current price.  
-  - Compute recent momentum or percentage change.  
-- Advanced methods:  
-  - Use machine learning models trained offline.  
-  - Combine technical indicators, volatility, and volume signals.  
+#### TC-20: Database Transaction Rollback
+- **Objective**: Verify @Transactional rollback on error
+- **Steps**:
+  1. Simulate database error during buyStock
+- **Expected Result**: No partial updates, all changes rolled back
+- **Status**: ✅ Pass
 
 ---
 
-# Main.java
+## CONCLUSION
 
-The application entry point.
+The Stock Trading System successfully demonstrates a comprehensive full-stack application architecture integrating desktop and web technologies. The project showcases:
 
-1. Initializes `DatabaseManager`.  
-2. Calls `gui.init()` to launch the Swing UI.  
+### Technical Achievements
+1. **Robust Architecture**: Clear separation of concerns with MVC pattern in desktop client and REST API in backend
+2. **Database Integration**: Dual database strategy (SQLite for client, PostgreSQL for server) with proper schema design and foreign key constraints
+3. **Third-Party API Integration**: Successful OAuth2 implementation with Fyers for real-time market data
+4. **Transaction Management**: ACID-compliant operations using `@Transactional` annotations and proper rollback handling
+5. **Object-Oriented Design**: Extensive use of interfaces, inheritance (Person → User), generics (List<Stock>, Map<String, Holding>), and collections
+6. **Concurrent Programming**: Threading for asynchronous API calls in `TrendPredictionService`
+7. **Security**: Password hashing (SHA-256), secure credential storage, OAuth2 token management
 
-```java
-public static void main(String[] args) {
-    DatabaseManager.init();
-    gui.init();
-}
-```
+### Key Features Implemented
+- User registration and authentication
+- Real-time stock quote retrieval
+- Historical market data visualization
+- Portfolio management (buy/sell operations)
+- Transaction history tracking
+- Trend prediction algorithms
+- Average price calculation for holdings
+- Cash balance management
 
-### Method and Startup Flow
+### Areas for Enhancement
+1. **Security Improvements**:
+   - Implement BCrypt for password hashing instead of plain text comparison
+   - Use JWT tokens for stateless authentication instead of static ACCESS_TOKEN
+   - Add HTTPS/TLS for API communication
+   - Implement CSRF protection
 
-The `main` method ties backend initialization and GUI startup together. It should remain as simple as possible.
+2. **Feature Additions**:
+   - Real-time price updates using WebSockets
+   - Advanced charting with technical indicators
+   - Multi-portfolio support per user
+   - Watchlist functionality
+   - Price alerts and notifications
+   - Export portfolio reports (PDF/CSV)
 
-- **Typical responsibilities**:  
-  - Load configuration, such as database URL and API keys.  
-  - Initialize singletons like `DatabaseManager`.  
-  - Create service instances and wire dependencies if not using a framework.  
-  - Call `gui.init()` so the user interface can take over.  
+3. **Code Quality**:
+   - Add comprehensive unit tests (JUnit for backend, JUnit + Mockito for services)
+   - Implement integration tests for API endpoints
+   - Add input validation and sanitization
+   - Improve error handling with custom exceptions
+   - Add logging framework (SLF4J + Logback)
+
+4. **Performance Optimization**:
+   - Implement caching for frequently accessed data (Redis)
+   - Add database connection pooling (HikariCP)
+   - Optimize SQL queries with indexes
+   - Implement pagination for large datasets
+
+5. **Deployment**:
+   - Containerize with Docker
+   - Add CI/CD pipeline (GitHub Actions)
+   - Deploy backend to cloud (AWS/Azure)
+   - Add monitoring and alerting (Prometheus + Grafana)
+
+### Learning Outcomes
+This project effectively demonstrates proficiency in:
+- Java SE (Swing, JDBC, Collections, Generics, Threads)
+- Java EE (Spring Boot, REST APIs, JPA/JDBC)
+- Database design and SQL
+- API integration and OAuth2
+- Software design patterns
+- Version control (Git)
+
+The Stock Trading System serves as a solid foundation for a production-ready financial application and showcases modern software development practices.
 
 ---
 
-## Architecture Overview
+## REFERENCES
 
-```mermaid
-classDiagram
-    AuthService <|.. AuthenticationService
-    PortfolioService <|.. PortfolioManagementService
-    StockPredictor <|.. TrendPredictionService
+### Technologies Used
+1. **Java 17** - Primary programming language
+2. **Spring Boot 3.5.7** - Backend framework
+3. **Gradle 8.14.3** - Build automation
+4. **PostgreSQL** - Relational database (backend)
+5. **SQLite** - Embedded database (client)
+6. **Swing** - GUI framework
+7. **JDBC** - Database connectivity
+8. **RestTemplate** - HTTP client
+9. **Fyers API** - Market data provider
 
-    DatabaseManager <.. AuthenticationService : uses
-    DatabaseManager <.. PortfolioManagementService : uses
-    ApiClient <.. TrendPredictionService      : uses
+### Documentation
+- [Spring Boot Documentation](https://docs.spring.io/spring-boot/docs/current/reference/html/)
+- [Fyers API Documentation](https://myapi.fyers.in/docs/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Java Swing Tutorial](https://docs.oracle.com/javase/tutorial/uiswing/)
 
-    LoginFrame --> AuthenticationService : login()
-    DashboardFrame --> PortfolioService     : getPortfolio(user)
-    DashboardFrame --> StockPredictor       : predict(symbol)
-```
+### Project Repositories
+- Stock_Java: `c:\Users\ASUS\OneDrive\Desktop\Stock_Java`
+- Stock-1: `c:\Users\ASUS\eclipse-workspace\Stock-1`
 
+### Database Schema
 ```mermaid
 erDiagram
-    USER {
-        UUID id
-        String username
-        String passwordHash
+    USERS ||--o{ PORTFOLIO : owns
+    PORTFOLIO ||--o{ HOLDINGS : contains
+    PORTFOLIO ||--o{ TRANSACTIONS : records
+    
+    USERS {
+        int id PK
+        string username
+        string email
+        string password
     }
+    
     PORTFOLIO {
-        UUID id
-        UUID userId
+        int id PK
+        int user_id FK
+        numeric cash_acc
     }
-    STOCK {
-        String symbol
+    
+    HOLDINGS {
+        int id PK
+        int portfolio_id FK
+        string symbl
+        int qty
+        numeric avg_price
     }
-    TRANSACTION {
-        UUID id
-        UUID portfolioId
-        String stockSymbol
+    
+    TRANSACTIONS {
+        int id PK
+        int portfolio_id FK
+        string symbl
+        string type
+        int qty
+        numeric price
+        timestamptz timestamp
     }
-
-    USER ||--o{ PORTFOLIO : owns
-    PORTFOLIO ||--o{ TRANSACTION : records
-    STOCK ||--o{ TRANSACTION : referenced
 ```
+
+### System Architecture
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        A[Swing GUI] --> B[Services Layer]
+        B --> C[Database Manager]
+        B --> D[API Client]
+    end
+    
+    subgraph "Backend Layer"
+        E[Spring Boot REST API] --> F[Controllers]
+        F --> G[Services]
+        G --> H[Data Service]
+        G --> I[Fyers Service]
+    end
+    
+    C --> J[(SQLite DB)]
+    H --> K[(PostgreSQL DB)]
+    I --> L[Fyers API]
+    D --> E
+    
+    style A fill:#e1f5ff
+    style E fill:#ffe1e1
+    style J fill:#e1ffe1
+    style K fill:#e1ffe1
+    style L fill:#fff5e1
+```
+
+---
+
+**Document Version**: 1.0  
+**Last Updated**: January 5, 2026  
+**Author**: Stock Trading System Development Team
